@@ -1,11 +1,18 @@
 defmodule WebrtcPhoenixWeb.RoomChannel do
   use Phoenix.Channel
+  require Logger
 
   @spec join(<<_::72>>, any(), Phoenix.Socket.t()) ::
           {:ok, %{session_id: any()}, Phoenix.Socket.t()}
+  @spec join(<<_::80>>, any(), Phoenix.Socket.t()) :: {:ok, Phoenix.Socket.t()}
   def join("room:lobby", _payload, socket) do
-    # {:ok, socket}
+    Logger.info("Client joined RTC channel")
+
+
+
     session_id = UUID.uuid4()  # Generate a unique session ID
+
+    # Task.start(fn -> SessionManager.on_session_started(session_id, self()) end)
     SessionManager.on_session_started(session_id, self())  # Notify SessionManager
 
     send(self(), :after_join)  # Send message to self to handle incoming messages
@@ -20,7 +27,17 @@ defmodule WebrtcPhoenixWeb.RoomChannel do
     {:noreply, socket}
   end
 
+  def handle_in("start_session", _params, socket) do
+    Logger.info("Starting session for client #{socket.assigns.user_id}")
+    session_id = UUID.uuid4()
+    SessionManager.on_session_started(session_id, socket)
+    {:noreply, socket}
+  end
 
+
+  @spec handle_info(:after_join | {:state, any()}, atom() | map()) ::
+          {:noreply, Phoenix.Socket.t()}
+          | {:stop, any(), atom() | %{:assigns => atom() | map(), optional(any()) => any()}}
   def handle_info(:after_join, socket) do
     # Loop to handle incoming messages
     receive do
@@ -41,7 +58,7 @@ defmodule WebrtcPhoenixWeb.RoomChannel do
         handle_info(:after_join, socket)
     after
       # Handle timeout or other cleanup logic if needed
-      15000 ->  # Adjust timeout as necessary
+      60000 ->  # Adjust timeout as necessary
         IO.puts("No messages received, closing session: #{socket.assigns.session_id}")
         SessionManager.on_session_close(socket.assigns.session_id)
         {:stop, :timeout, socket}

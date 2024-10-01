@@ -3,6 +3,7 @@ defmodule WebrtcPhoenixWeb.UserSocket do
 
   # Channels
   channel "room:*", WebrtcPhoenixWeb.RoomChannel
+  # channel "room:lobby", WebrtcPhoenixWeb.RoomChannel
 
   # When a user connects, you can assign them an ID
   def connect(%{"token" => token}, socket, _connect_info) do
